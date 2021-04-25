@@ -1,3 +1,4 @@
+from torch import ModuleList
 import torch.nn as nn
 import torchvision.models as models
 from resnet import resnet34
@@ -15,8 +16,9 @@ class Resnet34_8s(nn.Module):
         self.resnet34_8s = nn.Sequential(*list(resnet34_8s.children())[:-2])
         self.avg_pool_1 = nn.AvgPool2d(kernel_size=7, stride=1, padding=3)
         self.fc = nn.Conv2d(resnet34_8s.inplanes, num_classes, 1)
-        self.avg_pool_2 = nn.AdaptiveAvgPool2d(output_size=(1,1))
-        self.linear = nn.Linear(in_features=512, out_features=1, bias=True)
+
+        self.avg_pool_classifiers = ModuleList(2*[nn.AdaptiveAvgPool2d(output_size=(1,1))])
+        self.linear_classifiers = ModuleList(2*[nn.Linear(in_features=512, out_features=1, bias=True)])
         self._normal_initialization(self.fc)
 
     def _normal_initialization(self, layer):
@@ -29,7 +31,15 @@ class Resnet34_8s(nn.Module):
         heatmap_pooled = self.avg_pool_1(x)
         heatmap = self.fc(heatmap_pooled)
         heatmap = nn.functional.upsample_bilinear(input=heatmap, size=input_spatial_dim)
-        cls_pooled = self.avg_pool_2(x)
-        cls_pooled = cls_pooled.view(cls_pooled.shape[0], cls_pooled.shape[1])
-        cls = self.linear(cls_pooled)
-        return heatmap, cls
+
+        # z rotation
+        cls_pooled_z = self.avg_pool_classifiers[0](x)
+        cls_pooled_z = cls_pooled_z.view(cls_pooled_z.shape[0], cls_pooled_z.shape[1])
+        cls_z = self.linear[0](cls_pooled_z)
+
+        # y rotation
+        cls_pooled_y = self.avg_pool_classifiers[1](x)
+        cls_pooled_y = cls_pooled_y.view(cls_pooled_y.shape[0], cls_pooled_y.shape[1])
+        cls_y = self.linear[1](cls_pooled_y)
+
+        return heatmap, cls_z, cls_y

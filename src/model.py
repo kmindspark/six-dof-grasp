@@ -17,7 +17,7 @@ class SixDOFNet(nn.Module):
                 self.resnet = Resnet34_8s(num_classes=1)
                 self.sigmoid = torch.nn.Sigmoid()
         def forward(self, x):
-                heatmap, cls = self.resnet(x) 
+                heatmap, cls = self.resnet(x)
                 heatmaps = self.sigmoid(heatmap[:,:1, :, :])
                 return heatmaps, cls
 
@@ -31,7 +31,7 @@ class SixDOFNet(nn.Module):
 #		self.resnet = Resnet34_8s(num_classes=1)
 #		self.sigmoid = torch.nn.Sigmoid()
 #	def forward(self, x):
-#		output = self.resnet(x) 
+#		output = self.resnet(x)
 #		heatmaps = self.sigmoid(output[:,:self.num_keypoints, :, :])
 #		return heatmaps
 #
@@ -41,5 +41,5 @@ if __name__ == '__main__':
 	heatmap = model.forward(x)
 	#print(model)
 	#print(heatmap.shape)
-	heatmap, cls = model.forward(x)
+	heatmap, clsz, clsy = model.forward(x)
 	print(heatmap.shape, cls.shape)

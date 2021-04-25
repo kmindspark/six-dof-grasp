@@ -49,11 +49,11 @@ class PoseDataset(Dataset):
 			pixel = (np.array([label.item().get("pixel")])*200/60).astype(int)
 			pixel[:,0] = np.clip(pixel[:, 0], 0, self.img_width-1)
 			pixel[:,1] = np.clip(pixel[:, 1], 0, self.img_height-1)
-			rot = np.array([rot[2]])
+			rot = np.array([rot[1], rot[2]])
 			self.rots.append(torch.from_numpy(rot).cuda())
 			self.pixels.append(torch.from_numpy(pixel).cuda())
 
-	def __getitem__(self, index):  
+	def __getitem__(self, index):
 		img_np = cv2.imread(self.imgs[index])
 		img_np = cv2.resize(img_np, (200,200))
 		img = self.transform(img_np)
@@ -63,7 +63,7 @@ class PoseDataset(Dataset):
 		V = pixel[:,1]
 		gaussian = gauss_2d_batch(self.img_width, self.img_height, self.gauss_sigma, U, V)
 		return img, gaussian, rot
-    
+
 	def __len__(self):
 		return len(self.rots)
 
