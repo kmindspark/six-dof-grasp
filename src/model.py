@@ -17,9 +17,9 @@ class SixDOFNet(nn.Module):
                 self.resnet = Resnet34_8s(num_classes=1)
                 self.sigmoid = torch.nn.Sigmoid()
         def forward(self, x):
-                heatmap, clsz, clsy = self.resnet(x)
+                heatmap, rots = self.resnet(x)
                 heatmaps = self.sigmoid(heatmap[:,:1, :, :])
-                return heatmaps, clsz, clsy
+                return heatmaps, rots
 
 #class SixDOFNet(nn.Module):
 #	def __init__(self, num_keypoints=1, img_height=480, img_width=640):
