@@ -15,22 +15,21 @@ from src.dataset import PoseDataset, transform
 MSE = torch.nn.MSELoss()
 bceLoss = nn.BCELoss()
 
-def angle_loss(a,b):
-     return MSE(torch.rad2deg(a), torch.rad2deg(b))
+def angle_loss(a,b,c):
+     return MSE(torch.rad2deg(a[:,0]), torch.rad2deg(b)) + MSE(torch.rad2deg(a[:,1]), torch.rad2deg(c))
 
 os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
 def forward(sample_batched, model):
     img, gt_gauss, gt_rot = sample_batched
     img = Variable(img.cuda() if use_cuda else img)
-    pred_gauss, pred_rot = model.forward(img)
-    rot_loss = angle_loss(gt_rot, pred_rot.double())
+    pred_gauss, pred_rotz, pred_roty = model.forward(img)
+    rot_loss = angle_loss(gt_rot, pred_rotz.double(), pred_roty.double())
     kpt_loss = bceLoss(pred_gauss.double(), gt_gauss)
     return (1-kpt_loss_weight)*rot_loss, kpt_loss_weight*kpt_loss
 
 def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
     for epoch in range(epochs):
-
         train_loss = 0.0
         train_kpt_loss = 0.0
         train_rot_loss = 0.0
