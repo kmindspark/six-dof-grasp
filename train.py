@@ -54,7 +54,7 @@ def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
             print('\r', end='')
         print('train kpt loss:', (1/kpt_loss_weight)*train_kpt_loss/i_batch)
         print('train rot loss:', np.sqrt((1/(1-kpt_loss_weight))*train_rot_loss/i_batch))
-        
+
         test_loss = 0.0
         test_kpt_loss = 0.0
         test_rot_loss = 0.0
@@ -81,9 +81,9 @@ if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
 
-train_dataset = PoseDataset('/host/datasets/cyl_white_kpt_test', transform)
+train_dataset = PoseDataset('/host/datasets/dset_train', transform)
 train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
-test_dataset = PoseDataset('/host/datasets/cyl_white_kpt_test', transform)
+test_dataset = PoseDataset('/host/datasets/dset_test', transform)
 test_data = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
 use_cuda = torch.cuda.is_available()
 
