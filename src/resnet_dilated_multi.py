@@ -1,4 +1,4 @@
-from torch import ModuleList
+from torch.nn import ModuleList
 import torch.nn as nn
 import torchvision.models as models
 from resnet import resnet34
