@@ -35,11 +35,11 @@ class Resnet34_8s(nn.Module):
         # z rotation
         cls_pooled_z = self.avg_pool_classifiers[0](x)
         cls_pooled_z = cls_pooled_z.view(cls_pooled_z.shape[0], cls_pooled_z.shape[1])
-        cls_z = self.linear[0](cls_pooled_z)
+        cls_z = self.linear_classifiers[0](cls_pooled_z)
 
         # y rotation
         cls_pooled_y = self.avg_pool_classifiers[1](x)
         cls_pooled_y = cls_pooled_y.view(cls_pooled_y.shape[0], cls_pooled_y.shape[1])
-        cls_y = self.linear[1](cls_pooled_y)
+        cls_y = self.linear_classifiers[1](cls_pooled_y)
 
         return heatmap, cls_z, cls_y
