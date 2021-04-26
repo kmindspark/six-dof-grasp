@@ -76,7 +76,7 @@ if __name__ == '__main__':
     torch.cuda.set_device(0)
     model = model.cuda()
     model.eval()
-    dataset_dir = '/host/datasets/cyl_dr_test'
+    dataset_dir = '/host/datasets/dset_test'
     image_dir = os.path.join(dataset_dir, 'images')
     labels_dir = os.path.join(dataset_dir, 'annots')
     world_to_cam = Matrix(np.load('%s/cam_to_world.npy'%(labels_dir)))
