@@ -41,5 +41,5 @@ if __name__ == '__main__':
 	heatmap = model.forward(x)
 	#print(model)
 	#print(heatmap.shape)
-	heatmap, clsz, clsy = model.forward(x)
-	print(heatmap.shape, clsz.shape)
+	heatmap, rots = model.forward(x)
+	print(heatmap.shape, rots.shape)

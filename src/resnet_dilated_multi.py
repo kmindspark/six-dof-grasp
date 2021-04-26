@@ -43,4 +43,4 @@ class Resnet34_8s(nn.Module):
         cls_pooled_y = cls_pooled_y.view(cls_pooled_y.shape[0], cls_pooled_y.shape[1])
         cls_y = self.linear_classifiers[1](cls_pooled_y)
 
-        return heatmap, torch.stack((cls_z, cls_y))
+        return heatmap, torch.squeeze(torch.stack((cls_z, cls_y), dim=1))
