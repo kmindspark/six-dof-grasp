@@ -15,10 +15,10 @@ def draw(img, source_px, imgpts, intensity=255):
     img = cv2.arrowedLine(img, source_px, tuple(imgpts[0].ravel()), (intensity,0,0), 2)
     img = cv2.arrowedLine(img, source_px, tuple(imgpts[1].ravel()), (0,intensity,0), 2)
     img = cv2.arrowedLine(img, source_px, tuple(imgpts[2].ravel()), (0,0,intensity), 2)
-    return img 
+    return img
 
 def project_3d_point(transformation_matrix,p,render_size):
-    p1 = transformation_matrix @ Vector((p.x, p.y, p.z, 1)) 
+    p1 = transformation_matrix @ Vector((p.x, p.y, p.z, 1))
     p2 = Vector(((p1.x/p1.w, p1.y/p1.w)))
     p2 = (np.array(p2) - (-1))/(1 - (-1)) # Normalize -1,1 to 0,1 range
     pixel = [int(p2[0] * render_size[0]), int(render_size[1] - p2[1]*render_size[1])]
@@ -42,9 +42,10 @@ def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
     img_t = img_t.cuda().unsqueeze(0)
     H,W,C = img.shape
     render_size = (W,H)
-    heatmap, pred = model(img_t)
+    heatmap, preds = model(img_t)
     heatmap = heatmap.detach().cpu().numpy()
-    pred = pred.detach().cpu().numpy().squeeze()
+    pred_z_rot = preds.detach().cpu().numpy()[:, 0].squeeze()
+    pred_y_rot = preds.detach().cpu().numpy()[:, 1].squeeze()
     heatmap = heatmap[0][0]
     pred_y, pred_x = np.unravel_index(heatmap.argmax(), heatmap.shape)
     heatmap = cv2.normalize(heatmap, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -53,7 +54,7 @@ def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
     heatmap = cv2.arrowedLine(heatmap, (100,100), (pred_x, pred_y), (0,0,0), 1)
     cv2.putText(heatmap,"Pred Offset",(pred_x,pred_y-15),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,0),1)
     trans = trans_gt = np.zeros(3)
-    rot_euler = np.array([0,0,pred])
+    rot_euler = np.array([0,pred_y_rot,pred_z_rot])
     #rot_euler = pred
     center_projected_pred, axes_projected_pred = proj_axes_from_trans_rot(trans_gt, rot_euler, render_size)
     vis_pred = draw(img.copy(),center_projected_pred,axes_projected_pred)
