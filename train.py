@@ -24,7 +24,6 @@ def forward(sample_batched, model):
     img, gt_gauss, gt_rot = sample_batched
     img = Variable(img.cuda() if use_cuda else img)
     pred_gauss, pred_rots = model.forward(img)
-    print(pred_rots)
     rot_loss = angle_loss(gt_rot, pred_rots)
     kpt_loss = bceLoss(pred_gauss.double(), gt_gauss)
     return (1-kpt_loss_weight)*rot_loss, kpt_loss_weight*kpt_loss
