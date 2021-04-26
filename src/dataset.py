@@ -49,7 +49,7 @@ class PoseDataset(Dataset):
 			pixel = (np.array([label.item().get("pixel")])*200/60).astype(int)
 			pixel[:,0] = np.clip(pixel[:, 0], 0, self.img_width-1)
 			pixel[:,1] = np.clip(pixel[:, 1], 0, self.img_height-1)
-			rot = np.array([rot[2]])
+			rot = np.array([rot[2], rot[1]])
 			self.rots.append(torch.from_numpy(rot).cuda())
 			self.pixels.append(torch.from_numpy(pixel).cuda())
 

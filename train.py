@@ -16,7 +16,9 @@ MSE = torch.nn.MSELoss()
 bceLoss = nn.BCELoss()
 
 def angle_loss(a,b):
-     return MSE(torch.rad2deg(a), torch.rad2deg(b))
+    print(a.shape)
+    print(b.shape)
+    return MSE(torch.rad2deg(a), torch.rad2deg(b))
 
 os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
@@ -24,6 +26,7 @@ def forward(sample_batched, model):
     img, gt_gauss, gt_rot = sample_batched
     img = Variable(img.cuda() if use_cuda else img)
     pred_gauss, pred_rots = model.forward(img)
+
     rot_loss = angle_loss(gt_rot, pred_rots.double())
     kpt_loss = bceLoss(pred_gauss.double(), gt_gauss)
     return (1-kpt_loss_weight)*rot_loss, kpt_loss_weight*kpt_loss
