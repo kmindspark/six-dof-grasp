@@ -16,8 +16,6 @@ MSE = torch.nn.MSELoss()
 bceLoss = nn.BCELoss()
 
 def angle_loss(a,b):
-    print(a.shape)
-    print(b.shape)
     return MSE(torch.rad2deg(a), torch.rad2deg(b))
 
 os.environ["CUDA_VISIBLE_DEVICES"]="2"
