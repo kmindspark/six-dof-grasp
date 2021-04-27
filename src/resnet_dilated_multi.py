@@ -17,7 +17,7 @@ class Resnet34_8s(nn.Module):
         self.fc = nn.Conv2d(resnet34_8s.inplanes, num_classes, 1)
 
         self.avg_pool_classifiers = nn.ModuleList(1*[nn.AdaptiveAvgPool2d(output_size=(1,1))])
-        self.linear_classifiers = nn.ModuleList(1*[nn.Linear(in_features=512, out_features=1, bias=True)])
+        self.linear_classifiers = nn.ModuleList(1*[nn.Linear(in_features=512, out_features=2, bias=True)])
 
         self._normal_initialization(self.fc)
 
