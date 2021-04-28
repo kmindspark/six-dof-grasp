@@ -21,12 +21,13 @@ def angle_loss(a,b):
 os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
 def forward(sample_batched, model):
-    img, gt_gauss, gt_rot = sample_batched
+    img, gt_gauss, gt_seg, gt_rot = sample_batched
     img = Variable(img.cuda() if use_cuda else img)
-    pred_gauss, pred_rot = model.forward(img)
+    pred_gauss, pred_seg, pred_rot = model.forward(img)
     rot_loss = angle_loss(gt_rot, pred_rot.double())
     kpt_loss = bceLoss(pred_gauss.double(), gt_gauss)
-    return (1-kpt_loss_weight)*rot_loss, kpt_loss_weight*kpt_loss
+    seg_loss = bceLoss(pred_seg.double(), gt_seg)
+    return (1-kpt_loss_weight)*rot_loss, kpt_loss_weight*kpt_loss, kpt_loss*seg_loss
 
 def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
     for epoch in range(epochs):
@@ -54,7 +55,7 @@ def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
             print('\r', end='')
         print('train kpt loss:', (1/kpt_loss_weight)*train_kpt_loss/i_batch)
         print('train rot loss:', np.sqrt((1/(1-kpt_loss_weight))*train_rot_loss/i_batch))
-        
+
         test_loss = 0.0
         test_kpt_loss = 0.0
         test_rot_loss = 0.0
