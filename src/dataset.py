@@ -39,6 +39,7 @@ class PoseDataset(Dataset):
 		self.gauss_sigma = gauss_sigma
 		self.rots = []
 		self.pixels = []
+		self.segs = []
 		labels_folder = os.path.join(dataset_dir, 'annots')
 		img_folder = os.path.join(dataset_dir, 'images')
 		for i in range(len(os.listdir(img_folder))-1):
@@ -46,6 +47,7 @@ class PoseDataset(Dataset):
 			label = np.load(os.path.join(labels_folder, '%05d.npy'%i), allow_pickle=True)
 			trans = label.item().get("trans")
 			rot = label.item().get("rot")
+			self.segs.append(label.item().get("mask_top"))
 			pixel = (np.array([label.item().get("pixel")])*200/60).astype(int)
 			pixel[:,0] = np.clip(pixel[:, 0], 0, self.img_width-1)
 			pixel[:,1] = np.clip(pixel[:, 1], 0, self.img_height-1)
@@ -62,7 +64,7 @@ class PoseDataset(Dataset):
 		U = pixel[:,0]
 		V = pixel[:,1]
 		gaussian = gauss_2d_batch(self.img_width, self.img_height, self.gauss_sigma, U, V)
-		return img, gaussian, rot
+		return img, gaussian, self.segs[index], rot
 
 	def __len__(self):
 		return len(self.rots)
