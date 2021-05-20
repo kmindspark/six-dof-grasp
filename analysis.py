@@ -17,6 +17,20 @@ def draw(img, source_px, imgpts, intensity=255):
     img = cv2.arrowedLine(img, source_px, tuple(imgpts[2].ravel()), (0,0,intensity), 2)
     return img
 
+def draw_distractor(img, source_px, imgpts):
+    imgpts = imgpts.astype(int)
+    img = cv2.arrowedLine(img, tuple(source_px), tuple(imgpts[0].ravel()), (100,0,0), 2)
+    return img
+
+def draw_angle(img, source_px, imgpts, angle):
+    imgpts = imgpts.astype(int)
+    img = cv2.line(img, tuple(source_px), tuple(imgpts[0].ravel()), (255,0,0), 2)
+    img = cv2.line(img, tuple(source_px), tuple(imgpts[1].ravel()), (0,255,0), 2)
+    img = cv2.line(img, tuple(source_px), tuple(imgpts[2].ravel()), (0,0,255), 2)
+    other_point = rotate_around_point(tuple(imgpts[0].ravel()), angle, tuple(source_px))
+    img = cv2.line(img, tuple(source_px), other_point, (100,0,0), 2)
+    return img
+
 def project_3d_point(transformation_matrix,p,render_size):
     p1 = transformation_matrix @ Vector((p.x, p.y, p.z, 1))
     p2 = Vector(((p1.x/p1.w, p1.y/p1.w)))
@@ -46,6 +60,8 @@ def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
     heatmap = heatmap.detach().cpu().numpy()
     pred_z_rot = preds.detach().cpu().numpy()[:, 0].squeeze()
     pred_y_rot = preds.detach().cpu().numpy()[:, 1].squeeze()
+    #pred_d_y_rot = preds.detach().cpu().numpy()[:, 2].squeeze()
+    angle = preds.detach().cpu().numpy()[:, 2].squeeze()
     heatmap = heatmap[0][0]
     pred_y, pred_x = np.unravel_index(heatmap.argmax(), heatmap.shape)
     heatmap = cv2.normalize(heatmap, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -57,7 +73,10 @@ def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
     rot_euler = np.array([0,pred_y_rot,pred_z_rot])
     #rot_euler = pred
     center_projected_pred, axes_projected_pred = proj_axes_from_trans_rot(trans_gt, rot_euler, render_size)
-    vis_pred = draw(img.copy(),center_projected_pred,axes_projected_pred)
+    vis_pred = draw_angle(img.copy(),center_projected_pred,axes_projected_pred, angle)
+    #d_rot_euler = np.array([0,0,pred_d_y_rot])
+    #_, d_axes_projected_pred = proj_axes_from_trans_rot(trans_gt, d_rot_euler, render_size)
+    #vis_pred = draw_distractor(vis_pred, center_projected_pred, d_axes_projected_pred)
     cv2.putText(vis_pred,"Pred",(20,20),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),1)
     if gt_rot is not None:
         center_projected_gt, axes_projected_gt = proj_axes_from_trans_rot(trans_gt, rot_euler_gt, render_size)
@@ -72,7 +91,7 @@ def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
     model = SixDOFNet()
-    model.load_state_dict(torch.load('/host/checkpoints/cyl_white_kpt/model_2_1_39.pth'))
+    model.load_state_dict(torch.load('/host/checkpoints/orthogonal_cables_one_linear/model_2_1_19.pth'))
     torch.cuda.set_device(0)
     model = model.cuda()
     model.eval()

@@ -18,8 +18,8 @@ class Resnet34_8s(nn.Module):
         self.avg_pool_1 = nn.AvgPool2d(kernel_size=7, stride=1, padding=3)
         self.fc = nn.Conv2d(resnet34_8s.inplanes, num_classes, 1)
 
-        self.avg_pool_classifiers = ModuleList(2*[nn.AdaptiveAvgPool2d(output_size=(1,1))])
-        self.linear_classifiers = ModuleList(2*[nn.Linear(in_features=512, out_features=1, bias=True)])
+        self.avg_pool_classifiers = ModuleList(1*[nn.AdaptiveAvgPool2d(output_size=(1,1))])
+        self.linear_classifiers = ModuleList(1*[nn.Linear(in_features=512, out_features=3, bias=True)])
         self._normal_initialization(self.fc)
 
     def _normal_initialization(self, layer):
@@ -39,8 +39,13 @@ class Resnet34_8s(nn.Module):
         cls_z = self.linear_classifiers[0](cls_pooled_z)
 
         # y rotation
-        cls_pooled_y = self.avg_pool_classifiers[1](x)
-        cls_pooled_y = cls_pooled_y.view(cls_pooled_y.shape[0], cls_pooled_y.shape[1])
-        cls_y = self.linear_classifiers[1](cls_pooled_y)
+        #cls_pooled_y = self.avg_pool_classifiers[1](x)
+        #cls_pooled_y = cls_pooled_y.view(cls_pooled_y.shape[0], cls_pooled_y.shape[1])
+        #cls_y = self.linear_classifiers[1](cls_pooled_y)
 
-        return heatmap, torch.cat((cls_z, cls_y), dim=1)
+        #distractor y rotation
+        #d_pooled_y = self.avg_pool_classifiers[2](x)
+        #d_pooled_y = d_pooled_y.view(d_pooled_y.shape[0], d_pooled_y.shape[1])
+        #d_y = self.linear_classifiers[2](d_pooled_y)
+
+        return heatmap, cls_z #torch.cat((cls_z, cls_y, d_y), dim=1)

@@ -71,7 +71,7 @@ def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
 
 # dataset
 workers=0
-dataset_dir = 'cyl_white_kpt'
+dataset_dir = 'angle'
 output_dir = 'checkpoints'
 save_dir = os.path.join(output_dir, dataset_dir)
 
@@ -81,9 +81,9 @@ if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
 
-train_dataset = PoseDataset('/host/datasets/dset_train', transform)
+train_dataset = PoseDataset('/host/datasets/angle_dset/dset_train', transform)
 train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
-test_dataset = PoseDataset('/host/datasets/dset_test', transform)
+test_dataset = PoseDataset('/host/datasets/angle_dset/dset_test', transform)
 test_data = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
 use_cuda = torch.cuda.is_available()
 

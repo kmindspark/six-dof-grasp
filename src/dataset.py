@@ -46,10 +46,11 @@ class PoseDataset(Dataset):
 			label = np.load(os.path.join(labels_folder, '%05d.npy'%i), allow_pickle=True)
 			trans = label.item().get("trans")
 			rot = label.item().get("rot")
+			d_rot = label.item().get("angle")
 			pixel = (np.array([label.item().get("pixel")])*200/60).astype(int)
 			pixel[:,0] = np.clip(pixel[:, 0], 0, self.img_width-1)
 			pixel[:,1] = np.clip(pixel[:, 1], 0, self.img_height-1)
-			rot = np.array([rot[2], rot[1]])
+			rot = np.array([rot[2], rot[1], d_rot[0]]) #add distractor cable rotation
 			self.rots.append(torch.from_numpy(rot).cuda())
 			self.pixels.append(torch.from_numpy(pixel).cuda())
 
@@ -62,6 +63,7 @@ class PoseDataset(Dataset):
 		U = pixel[:,0]
 		V = pixel[:,1]
 		gaussian = gauss_2d_batch(self.img_width, self.img_height, self.gauss_sigma, U, V)
+
 		return img, gaussian, rot
 
 	def __len__(self):
