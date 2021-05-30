@@ -38,38 +38,49 @@ class PoseDataset(Dataset):
 		self.img_width = img_width
 		self.gauss_sigma = gauss_sigma
 		self.rots = []
-		self.pixels = []
-		labels_folder = os.path.join(dataset_dir, 'annots')
+		#self.pixels = []
+		self.dz = []
+		self.results = []
+		result_folder = os.path.join(dataset_dir, 'results')
+		actions_folder = os.path.join(dataset_dir, 'annots')
 		img_folder = os.path.join(dataset_dir, 'images')
 		for i in range(len(os.listdir(img_folder))-1):
 			self.imgs.append(os.path.join(img_folder, '%05d.jpg'%i))
-			label = np.load(os.path.join(labels_folder, '%05d.npy'%i), allow_pickle=True)
-			trans = label.item().get("trans")
-			rot = label.item().get("rot")
-			d_rot = label.item().get("angle")
-			pixel = (np.array([label.item().get("pixel")])*200/60).astype(int)
-			pixel[:,0] = np.clip(pixel[:, 0], 0, self.img_width-1)
-			pixel[:,1] = np.clip(pixel[:, 1], 0, self.img_height-1)
-			rot = np.array([rot[2], rot[1], d_rot[0]]) #add distractor cable rotation
+			action = np.load(os.path.join(actions_folder, '%05d.npy'%i), allow_pickle=True)
+			result = np.load(os.path.join(result_folder, '%05d.npy'%i), allow_pickle=True)
+			result = result.astype(np.double)
+			rot = action.item().get("rot")
+			dz = action.item().get("angle") #change angle to be dz when actually using
+			dz = dz.astype(np.float32)
+			#pixel = (np.array([action.item().get("pixel")])*200/60).astype(int)
+			#pixel[:,0] = np.clip(pixel[:, 0], 0, self.img_width-1)
+			#pixel[:,1] = np.clip(pixel[:, 1], 0, self.img_height-1)
+			rot = np.array([rot[2], rot[1]])
+			rot = rot.astype(np.float32)
+			#rot = np.array([rot[2], rot[1], d_rot[0]]) #add distractor cable rotation
 			self.rots.append(torch.from_numpy(rot).cuda())
-			self.pixels.append(torch.from_numpy(pixel).cuda())
+			#self.pixels.append(torch.from_numpy(pixel).cuda())
+			self.dz.append(torch.from_numpy(dz).cuda())
+			self.results.append(torch.from_numpy(result).cuda())
 
 	def __getitem__(self, index):
 		img_np = cv2.imread(self.imgs[index])
 		img_np = cv2.resize(img_np, (200,200))
 		img = self.transform(img_np)
 		rot = self.rots[index]
-		pixel = self.pixels[index]
-		U = pixel[:,0]
-		V = pixel[:,1]
-		gaussian = gauss_2d_batch(self.img_width, self.img_height, self.gauss_sigma, U, V)
+		#pixel = self.pixels[index]
+		dz = self.dz[index]
+		result = self.results[index]
+		#U = pixel[:,0]
+		#V = pixel[:,1]
+		#gaussian = gauss_2d_batch(self.img_width, self.img_height, self.gauss_sigma, U, V)
 
-		return img, gaussian, rot
+		return img, rot, dz, result #gaussian, rot, result
 
 	def __len__(self):
 		return len(self.rots)
 
 if __name__ == '__main__':
+        #TODO: need to test
 	dset = PoseDataset('/host/datasets/cyl_white_kpt_test', transform)
-	img, gauss, labels = dset[0]
-	vis_gauss(gauss)
+	img, rot, label = dset[0]

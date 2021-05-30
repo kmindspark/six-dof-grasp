@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 from config import *
 from src.model import SixDOFNet
 from src.dataset import PoseDataset, transform
-
 MSE = torch.nn.MSELoss()
 bceLoss = nn.BCELoss()
 
@@ -21,57 +20,37 @@ def angle_loss(a,b):
 os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
 def forward(sample_batched, model):
-    img, gt_gauss, gt_rot = sample_batched
+    img, gt_rot, gt_dz, gt_result = sample_batched
     img = Variable(img.cuda() if use_cuda else img)
-    pred_gauss, pred_rots = model.forward(img)
-
-    rot_loss = angle_loss(gt_rot, pred_rots.double())
-    kpt_loss = bceLoss(pred_gauss.double(), gt_gauss)
-    return (1-kpt_loss_weight)*rot_loss, kpt_loss_weight*kpt_loss
+    pred_result = model.forward(img, gt_rot, gt_dz).double() #predict success given image and action
+    gt_result = gt_result.double()
+    loss = F.binary_cross_entropy_with_logits(pred_result, gt_result)
+    return loss
 
 def fit(train_data, test_data, model, epochs, checkpoint_path = ''):
     for epoch in range(epochs):
         train_loss = 0.0
-        train_kpt_loss = 0.0
-        train_rot_loss = 0.0
         for i_batch, sample_batched in enumerate(train_data):
-            #if i_batch>10:
-            #    break
-            optimizer_kpt.zero_grad()
-            optimizer_rot.zero_grad()
-            rot_loss, kpt_loss = forward(sample_batched, model)
-            #rot_loss.backward()
-            #kpt_loss.backward()
-            rot_loss.backward(retain_graph=True)
-            kpt_loss.backward(retain_graph=True)
-            optimizer_rot.step()
-            optimizer_kpt.step()
-            train_loss += kpt_loss.item() + rot_loss.item()
-            train_kpt_loss += kpt_loss.item()
-            train_rot_loss += rot_loss.item()
-            print('[%d, %5d] kpts loss: %.3f, rot loss: %.3f' % \
-	           (epoch + 1, i_batch + 1, kpt_loss.item(), rot_loss.item()), end='')
+            optimizer.zero_grad()
+            loss = forward(sample_batched, model)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+            print('[%d, %5d] loss: %.3f' % (epoch + 1, i_batch + 1, loss.item()), end='')
             print('\r', end='')
-        print('train kpt loss:', (1/kpt_loss_weight)*train_kpt_loss/i_batch)
-        print('train rot loss:', np.sqrt((1/(1-kpt_loss_weight))*train_rot_loss/i_batch))
+        print('train loss:', train_loss/i_batch)
 
         test_loss = 0.0
-        test_kpt_loss = 0.0
-        test_rot_loss = 0.0
         for i_batch, sample_batched in enumerate(test_data):
-            #if i_batch>10:
-            #    break
-            rot_loss, kpt_loss = forward(sample_batched, model)
-            test_loss += kpt_loss.item() + rot_loss.item()
-            test_kpt_loss += kpt_loss.item()
-            test_rot_loss += rot_loss.item()
-        print('test kpt loss:', (1/kpt_loss_weight)*test_kpt_loss/i_batch)
-        print('test rot loss:', np.sqrt((1/(1-kpt_loss_weight))*test_rot_loss/i_batch))
-        torch.save(model.state_dict(), checkpoint_path + '/model_2_1_' + str(epoch) + '.pth')
+            loss = forward(sample_batched, model)
+            test_loss += loss.item()
+        print('test kpt loss:', test_loss/i_batch)
+        if epoch%2 == 0:
+            torch.save(model.state_dict(), checkpoint_path + '/model_2_1_' + str(epoch) + '_' + str(test_loss/i_batch) + '.pth')
 
 # dataset
 workers=0
-dataset_dir = 'angle'
+dataset_dir = 'dummy_grasp_success'
 output_dir = 'checkpoints'
 save_dir = os.path.join(output_dir, dataset_dir)
 
@@ -81,9 +60,9 @@ if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
 
-train_dataset = PoseDataset('/host/datasets/angle_dset/dset_train', transform)
+train_dataset = PoseDataset('/host/datasets/dummy_grasp_success/dummy_train', transform)
 train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
-test_dataset = PoseDataset('/host/datasets/angle_dset/dset_test', transform)
+test_dataset = PoseDataset('/host/datasets/dummy_grasp_success/dummy_test', transform)
 test_data = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
 use_cuda = torch.cuda.is_available()
 
@@ -95,8 +74,7 @@ if use_cuda:
 model = SixDOFNet().cuda()
 
 # optimizer
-optimizer_kpt = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
-optimizer_rot = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
+optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
 
 print(epochs)
 fit(train_data, test_data, model, epochs=epochs, checkpoint_path=save_dir)

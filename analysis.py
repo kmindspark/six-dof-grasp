@@ -17,20 +17,6 @@ def draw(img, source_px, imgpts, intensity=255):
     img = cv2.arrowedLine(img, source_px, tuple(imgpts[2].ravel()), (0,0,intensity), 2)
     return img
 
-def draw_distractor(img, source_px, imgpts):
-    imgpts = imgpts.astype(int)
-    img = cv2.arrowedLine(img, tuple(source_px), tuple(imgpts[0].ravel()), (100,0,0), 2)
-    return img
-
-def draw_angle(img, source_px, imgpts, angle):
-    imgpts = imgpts.astype(int)
-    img = cv2.line(img, tuple(source_px), tuple(imgpts[0].ravel()), (255,0,0), 2)
-    img = cv2.line(img, tuple(source_px), tuple(imgpts[1].ravel()), (0,255,0), 2)
-    img = cv2.line(img, tuple(source_px), tuple(imgpts[2].ravel()), (0,0,255), 2)
-    other_point = rotate_around_point(tuple(imgpts[0].ravel()), angle, tuple(source_px))
-    img = cv2.line(img, tuple(source_px), other_point, (100,0,0), 2)
-    return img
-
 def project_3d_point(transformation_matrix,p,render_size):
     p1 = transformation_matrix @ Vector((p.x, p.y, p.z, 1))
     p2 = Vector(((p1.x/p1.w, p1.y/p1.w)))
@@ -51,6 +37,21 @@ def proj_axes_from_trans_rot(trans, rot_euler, render_size):
     center_projected = tuple(center_projected)
     return center_projected, axes_projected
 
+def get_center_axes(pixel, rot_euler, trans, render_size, world_to_cam):
+    rot_mat = R.from_euler('xyz', rot_euler).as_matrix()
+    axes = np.float32([[1,0,0],[0,1,0],[0,0,-1]])*0.3
+    axes = rot_mat@axes
+    axes += trans
+    axes_projected = []
+    center_projected = project_3d_point(world_to_cam, Vector(trans), render_size)
+    for axis in axes:
+        axes_projected.append(project_3d_point(world_to_cam, Vector(axis), render_size))
+    axes_projected = np.array(axes_projected)
+    center_projected = pixel.astype(int)
+    pixel = (200/60)*pixel
+    pixel = tuple(pixel.astype(int))
+    return pixel, center_projected, axes_projected
+
 def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
     img_t = transform(img)
     img_t = img_t.cuda().unsqueeze(0)
@@ -60,7 +61,6 @@ def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
     heatmap = heatmap.detach().cpu().numpy()
     pred_z_rot = preds.detach().cpu().numpy()[:, 0].squeeze()
     pred_y_rot = preds.detach().cpu().numpy()[:, 1].squeeze()
-    #pred_d_y_rot = preds.detach().cpu().numpy()[:, 2].squeeze()
     angle = preds.detach().cpu().numpy()[:, 2].squeeze()
     heatmap = heatmap[0][0]
     pred_y, pred_x = np.unravel_index(heatmap.argmax(), heatmap.shape)
@@ -71,12 +71,8 @@ def run_inference(model, img, world_to_cam, gt_rot=None, output_dir='vis'):
     cv2.putText(heatmap,"Pred Offset",(pred_x,pred_y-15),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,0),1)
     trans = trans_gt = np.zeros(3)
     rot_euler = np.array([0,pred_y_rot,pred_z_rot])
-    #rot_euler = pred
     center_projected_pred, axes_projected_pred = proj_axes_from_trans_rot(trans_gt, rot_euler, render_size)
     vis_pred = draw_angle(img.copy(),center_projected_pred,axes_projected_pred, angle)
-    #d_rot_euler = np.array([0,0,pred_d_y_rot])
-    #_, d_axes_projected_pred = proj_axes_from_trans_rot(trans_gt, d_rot_euler, render_size)
-    #vis_pred = draw_distractor(vis_pred, center_projected_pred, d_axes_projected_pred)
     cv2.putText(vis_pred,"Pred",(20,20),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255),1)
     if gt_rot is not None:
         center_projected_gt, axes_projected_gt = proj_axes_from_trans_rot(trans_gt, rot_euler_gt, render_size)
@@ -100,22 +96,34 @@ if __name__ == '__main__':
     labels_dir = os.path.join(dataset_dir, 'annots')
     world_to_cam = Matrix(np.load('%s/cam_to_world.npy'%(labels_dir)))
     output_dir = 'vis'
-    test_dir = '/host/datasets/crops'
-    #test_dir = '/host/datasets/cyl_white_kpt_train/images'
-    #test_dir = '/host/datasets/real_twocable_crops'
-    #test_dir = '/host/datasets/cyl_dr_test/images'
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
-    for idx, f in enumerate(sorted(os.listdir(test_dir))):
+    if not os.path.exists('%s/fail'%(output_dir)):
+        os.mkdir('%s/fail'%(output_dir))
+    if not os.path.exists('%s/success'%(output_dir)):
+        os.mkdir('%s/success'%(output_dir))
+    for i, f in enumerate(sorted(os.listdir(image_dir))):
         try:
-            img = cv2.imread(os.path.join(test_dir, f))
-            print(os.path.join(test_dir, f))
-            img = cv2.resize(img, (200,200))
-            gt_trans = np.zeros(3)
-            gt_rot = None
-            vis = run_inference(model, img, world_to_cam, gt_rot, output_dir)
-            print("Annotating %06d"%idx)
-            annotated_filename = "%05d.jpg"%idx
-            cv2.imwrite('%s/%s'%(output_dir, annotated_filename), vis)
+            img = cv2.imread(os.path.join(image_dir, f))
+            H,W,C = img.shape
+            render_size = (W,H)
+            #img = cv2.resize(img, (200,200))
+            label = np.load(os.path.join(labels_dir, '%05d.npy'%i), allow_pickle=True)
+	    trans = label.item().get("trans")
+	    rot = label.item().get("rot")
+            pixel = label.item().get("pixel")
+            pixel, center_projected, axes_projected = get_center_axes(pixel, rot_euler, trans, render_size, world_to_cam)
+            vis = img.copy()
+            vis = draw(vis, center_projected, axes_projected)
+            vis = cv2.resize(vis,(200,200))
+
+            #Still under construction 
+            success_pred = model(img, rot)
+
+            annotated_filename = "%05d.jpg"%i
+            if success_pred < 0.5:
+                cv2.imwrite('%s/%s/%s'%(output_dir, 'fail', annotated_filename), vis)
+            else:
+                cv2.imwrite('%s/%s/%s'%(output_dir, 'success', annotated_filename), vis)
         except:
             pass

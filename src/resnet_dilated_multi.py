@@ -38,14 +38,4 @@ class Resnet34_8s(nn.Module):
         cls_pooled_z = cls_pooled_z.view(cls_pooled_z.shape[0], cls_pooled_z.shape[1])
         cls_z = self.linear_classifiers[0](cls_pooled_z)
 
-        # y rotation
-        #cls_pooled_y = self.avg_pool_classifiers[1](x)
-        #cls_pooled_y = cls_pooled_y.view(cls_pooled_y.shape[0], cls_pooled_y.shape[1])
-        #cls_y = self.linear_classifiers[1](cls_pooled_y)
-
-        #distractor y rotation
-        #d_pooled_y = self.avg_pool_classifiers[2](x)
-        #d_pooled_y = d_pooled_y.view(d_pooled_y.shape[0], d_pooled_y.shape[1])
-        #d_y = self.linear_classifiers[2](d_pooled_y)
-
-        return heatmap, cls_z #torch.cat((cls_z, cls_y, d_y), dim=1)
+        return heatmap, cls_z
