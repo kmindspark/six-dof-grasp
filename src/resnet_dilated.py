@@ -22,6 +22,7 @@ class Resnet34_8s(nn.Module):
         layer.bias.data.zero_()
         
     def forward(self, x):
+        #print(x.shape())
         input_spatial_dim = x.size()[2:]
         x = self.resnet34_8s(x)
         x = nn.functional.upsample_bilinear(input=x, size=input_spatial_dim)

@@ -17,7 +17,7 @@ class SixDOFNet(nn.Module):
                 self.fc1 = nn.Linear(40003, 128)
                 self.fc2 = nn.Linear(128, 1)
                 self.sigmoid = nn.Sigmoid()
-        def forward(self, img, rot, dz):
+        def forward(self, img, rot, dz):               
                 output = self.resnet(img)
                 output = torch.flatten(output, 1)
                 output = torch.cat((output, rot), 1)
